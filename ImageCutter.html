@@ -68,8 +68,8 @@ function onloadImage()
     var iHeightOffset = parseInt(document.getElementById("IdHeightOffset").value);
     var iColumn = parseInt(document.getElementById("IdInputColumn").value);
     var iRow = parseInt(document.getElementById("IdInputRow").value);
-    var iWidth = (oCtx.canvas.width -  iWidthOffset * 2) / iColumn;
-    var iHeight = (oCtx.canvas.height - iHeightOffset * 2) / iRow;
+    var iWidth = Math.floor((oCtx.canvas.width -  iWidthOffset * 2) / iColumn);
+    var iHeight = Math.floor((oCtx.canvas.height - iHeightOffset * 2) / iRow);
     
     addCuttedImageInfo(" (Width:" + iWidth + ", Height:" + iHeight + ")");
     
