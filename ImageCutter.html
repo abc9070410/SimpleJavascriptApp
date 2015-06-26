@@ -137,7 +137,7 @@ function onloadScaleImage()
             var oImageData = oCtx.getImageData(iWidthOffset + j * iWidth, iHeightOffset + i * iHeight, iWidth, iHeight);
             var eCanvas = createCuttedImage(oImageData, iWidth, iHeight, iNo);
             var eNewLine = createText("\n");
-            var sFileName = sOriginalFileName + "_" + iNo;
+            var sFileName = sOriginalFileName + "_" + iNo + ".png";
             var eHref = createDownloadButton("Download", sFileName, eCanvas.toDataURL());
 
             eCell.appendChild(eCanvas);
