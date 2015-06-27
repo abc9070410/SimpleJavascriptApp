@@ -1,0 +1,228 @@
+<!--
+
+The MIT License (MIT)
+
+Copyright (c) 2014-2015 SurveyorK
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-->
+
+<html>
+<head>
+	<meta charset="utf-8">
+    <title>Image Cutter</title>
+    
+<script type="text/javascript">
+    
+// Recommended browser : Chrome
+    
+function loadImageFile()
+{
+    var eFiles = document.getElementById("IdInputImageFile").files;
+    
+    if (eFiles.length > 0)
+    {
+        deleteAllCuttedImage();
+        deleteAllImageInfo();
+        
+        var eFile = eFiles[0];
+        var oFileReader = new FileReader();
+        
+        oFileReader.onload = function(event)
+        {
+            drawImage(event.target.result, eFile.name);
+        }
+        oFileReader.readAsDataURL(eFile);
+    }
+}
+
+function addOriginalImageInfo(sInfo)
+{
+    var eDiv = document.getElementById("IdOriginalImageInfo");
+    eDiv.innerHTML += sInfo;
+}
+
+function addCuttedImageInfo(sInfo)
+{
+    var eDiv = document.getElementById("IdCuttedImageInfo");
+    eDiv.innerHTML += sInfo;
+}
+
+function deleteAllImageInfo()
+{
+    document.getElementById("IdOriginalImageInfo").innerHTML = "The Original Image : ";
+    document.getElementById("IdCuttedImageInfo").innerHTML = "The Cutted Images : ";
+}
+
+function drawImage(sDataUrl, sFileName)
+{
+    var oOriginalImage = new Image;
+
+    oOriginalImage.onload = onloadOriginalImage;
+    oOriginalImage.src = sDataUrl;
+
+    var oScaleImage = new Image;
+    
+    oScaleImage.onload = onloadScaleImage;
+    oScaleImage.fileName = sFileName;
+    oScaleImage.src = sDataUrl;
+}
+
+function onloadOriginalImage()
+{
+    var eCanvas = document.getElementById("IdCanvasOriginalImage");
+    var oCtx = eCanvas.getContext("2d");
+
+    addOriginalImageInfo(" (Width:" + this.width + ", Height:" + this.height + ")");
+    
+    oCtx.canvas.width = this.width;
+    oCtx.canvas.height = this.height;
+    oCtx.drawImage(this, 0, 0);
+}
+
+function onloadScaleImage()
+{
+    var eCanvas = document.createElement("canvas");
+    var oCtx = eCanvas.getContext("2d");
+    
+    eCanvas.className = "ScaleCanvas";
+
+    var iWidthScale = parseFloat(document.getElementById("IdWidthScale").value);
+    var iHeightScale = parseFloat(document.getElementById("IdHeightScale").value);
+    var iTotalWidth = this.width * iWidthScale;
+    var iTotalHeight = this.height * iHeightScale;
+
+    oCtx.canvas.width = iTotalWidth;
+    oCtx.canvas.height = iTotalHeight;
+    oCtx.drawImage(this, 0, 0, iTotalWidth, iTotalHeight);
+    
+    var iWidthOffset = parseInt(document.getElementById("IdWidthOffset").value);
+    var iHeightOffset = parseInt(document.getElementById("IdHeightOffset").value);
+    var iColumn = parseInt(document.getElementById("IdInputColumn").value);
+    var iRow = parseInt(document.getElementById("IdInputRow").value);
+    var iWidth = Math.floor((oCtx.canvas.width -  iWidthOffset * 2) / iColumn);
+    var iHeight = Math.floor((oCtx.canvas.height - iHeightOffset * 2) / iRow);
+    
+    addCuttedImageInfo(" (Width:" + iWidth + ", Height:" + iHeight + ")");
+    
+    var sOriginalFileName = this.fileName.substring(0, this.fileName.length - 4);
+    var eTable = document.getElementById("IdTableCUttedImage");
+
+    for (var i = 0; i < iRow; i++)
+    {
+        var eRow = eTable.insertRow(i);
+        
+        for (var j = 0; j < iColumn; j++)
+        {
+            var eCell = eRow.insertCell(j);
+            
+            var iNo = i * iColumn + j + 1;
+            var oImageData = oCtx.getImageData(iWidthOffset + j * iWidth, iHeightOffset + i * iHeight, iWidth, iHeight);
+            var eCanvas = createCuttedImage(oImageData, iWidth, iHeight, iNo);
+            var eNewLine = createText("\n");
+            var sFileName = sOriginalFileName + "_" + iNo + ".png";
+            var eHref = createDownloadButton("Download", sFileName, eCanvas.toDataURL());
+
+            eCell.appendChild(eCanvas);
+            eCell.appendChild(eNewLine);
+            eCell.appendChild(eHref);
+            
+            //console.log("[IC][" + iNo + "]:" + (j * iWidth) + "," + (i * iHeight));
+        }
+    }
+}
+
+function createCuttedImage(oImageData, iWidth, iHeight, iNo)
+{
+    var eCanvas = document.createElement("canvas");
+    var oCtx = eCanvas.getContext("2d");
+    //eCanvas.id = "IdCanvas" + iNo;
+    eCanvas.className = "CuttedCanvas";
+    oCtx.canvas.width = oImageData.width;
+    oCtx.canvas.height = oImageData.height;
+    oCtx.putImageData(oImageData, 0, 0);
+
+    return eCanvas;
+}
+
+function deleteAllCuttedImage()
+{
+    document.getElementById("IdTableCUttedImage").innerHTML = "";
+}
+
+function createDownloadButton(sText, sFileName, sDataUrl)
+{
+    var eHref = document.createElement("a");
+    eHref.download = sFileName;
+    eHref.text = sText;
+    eHref.href = sDataUrl;
+    
+    return eHref;
+}
+
+function createText(sText)
+{
+    return document.createTextNode(sText);
+}
+
+</script>
+</head>
+<style type='text/css'>
+    .InputNumber{
+        width:50px;
+        display:inline-block;
+    }
+    .Title {
+        background: green;
+    }
+</style>
+<body>
+    <p class="Title">Config : </p>
+    <table style="width:90%;">
+        <tr>
+            <td>Column : </td>
+            <td><input type="number" id="IdInputColumn" value="4" class="InputNumber" min="1" max="20"></input></td> 
+            <td>Width Scale : </td>
+            <td><input type="number" id="IdWidthScale" value="1" class="InputNumber" min="0.1" max="20" step="0.1"></input></td> 
+            <td>Left/Right Offset (pixels) : </td>
+            <td><input type="number" id="IdWidthOffset" value="0" class="InputNumber"></input></td> 
+        </tr>
+        <tr>
+            <td>Row : </td>
+            <td><input type="number" id="IdInputRow" value="2" class="InputNumber" min="1" max="20"></input></td>
+            <td>Height Scale : </td>
+            <td><input type="number" id="IdHeightScale" value="1" class="InputNumber" min="0.1" max="20" step="0.1"></input></td>
+            <td>Top/Buttom Offset (pixels) : </td>
+            <td><input type="number" id="IdHeightOffset" value="0" class="InputNumber"></input></td>
+        </tr>
+    </table>
+    <div></div>
+    <div></div>
+    
+    <p class="Title">Select a Image file :</p>
+    <input type="file" id="IdInputImageFile" onchange="loadImageFile();"></input>
+    <input type="button" value="Remake" onclick="loadImageFile();"></input><br></br>
+    <div id="IdOriginalImageInfo" class="Title"></div>
+    <canvas id="IdCanvasOriginalImage"></canvas>
+    
+    <p id="IdCuttedImageInfo" class="Title"></p>
+    <table id="IdTableCUttedImage" style="border:3px #cccccc solid;" cellpadding="10" border='1'></table>
+</body>
+</html>
