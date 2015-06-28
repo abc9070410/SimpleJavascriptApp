@@ -145,7 +145,7 @@ function onloadScaleImage()
     createTable();
     
     updateTimerInfo();
-    
+
     setInterval(updateTimerInfo, 1000); // update timer infomation per second
 }
 
@@ -257,12 +257,15 @@ function tapOrClick(event)
 }
 
 function swapCuttedCanvas(iA, iB)
-{
+{   
     var iMax = giRow * giColumn - 1;
     
     if ((gaeCuttedCanvas[iA].isDummy || gaeCuttedCanvas[iB].isDummy) &&
         (iA >= 0 && iA <= iMax && iB >= 0 && iB <= iMax) && 
-        (iA == iB + 1 || iA == iB - 1 || iA == iB + giColumn || iA == iB - giColumn))
+        ((iA == iB + 1 && iA % giColumn != 0) || 
+         (iA == iB - 1 && iB % giColumn != 0) || 
+         iA == iB + giColumn || 
+         iA == iB - giColumn))
     {
         var eCanvas = gaeCuttedCanvas[iA];
         gaeCuttedCanvas[iA] = gaeCuttedCanvas[iB];
@@ -310,23 +313,6 @@ function finishPuzzle()
     
     return true;
 }
-
-function createDownloadButton(sText, sFileName, sDataUrl)
-{
-    var eHref = document.createElement("a");
-    eHref.download = sFileName;
-    eHref.text = sText;
-    eHref.href = sDataUrl;
-    
-    return eHref;
-}
-
-function createText(sText)
-{
-    return document.createTextNode(sText);
-}
-
-    
 
 </script>
 </head>
