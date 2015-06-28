@@ -1,0 +1,372 @@
+<!--
+
+The MIT License (MIT)
+
+Copyright (c) 2014-2015 SurveyorK
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-->
+
+<html>
+<head>
+	<meta charset="utf-8">
+    <title>Image Puzzle</title>
+    
+<script type="text/javascript">
+    
+// Recommended browser : Chrome
+
+var gaeCuttedCanvas = [];
+var giColumn = 0;
+var giRow = 0;
+var giDummyNo = -1;
+var giGameSecond = 0;
+
+
+function loadImageFile()
+{
+    var eFiles = document.getElementById("IdInputImageFile").files;
+    
+    if (eFiles.length > 0)
+    {
+        deleteAllCuttedImage();
+        deleteAllImageInfo();
+        
+        var eFile = eFiles[0];
+        var oFileReader = new FileReader();
+        
+        oFileReader.onload = function(event)
+        {
+            drawImage(event.target.result, eFile.name);
+        }
+        oFileReader.readAsDataURL(eFile);
+    }
+}
+
+function addCuttedImageInfo(sInfo)
+{
+    var eDiv = document.getElementById("IdCuttedImageInfo");
+    eDiv.innerHTML += sInfo;
+}
+
+function deleteAllImageInfo()
+{
+    document.getElementById("IdCuttedImageInfo").innerHTML = "";
+}
+
+function updateTimerInfo()
+{
+    deleteAllImageInfo();
+    
+    giGameSecond++;
+    
+    var iMinute = parseInt(giGameSecond / 60);
+    var sMinute = iMinute >= 10 ? "" + iMinute : "0" + iMinute;
+    var iSecond = parseInt(giGameSecond % 60);
+    var sSecond = iSecond >= 10 ? "" + iSecond : "0" + iSecond;
+    var sInfo = "Game Start [" + sMinute + " : " + sSecond + "]";
+    
+    addCuttedImageInfo(sInfo);
+}
+
+function drawImage(sDataUrl, sFileName)
+{
+    var oScaleImage = new Image;
+    
+    oScaleImage.onload = onloadScaleImage;
+    oScaleImage.fileName = sFileName;
+    oScaleImage.src = sDataUrl;
+}
+
+function onloadScaleImage()
+{
+    var eCanvas = document.createElement("canvas");
+    var oCtx = eCanvas.getContext("2d");
+    
+    eCanvas.className = "ScaleCanvas";
+
+    var iWidthScale = parseFloat(document.getElementById("IdWidthScale").value);
+    var iHeightScale = parseFloat(document.getElementById("IdHeightScale").value);
+    var iTotalWidth = this.width * iWidthScale;
+    var iTotalHeight = this.height * iHeightScale;
+
+    oCtx.canvas.width = iTotalWidth;
+    oCtx.canvas.height = iTotalHeight;
+    oCtx.drawImage(this, 0, 0, iTotalWidth, iTotalHeight);
+    
+    giColumn = parseInt(document.getElementById("IdInputColumn").value);
+    giRow = parseInt(document.getElementById("IdInputRow").value);
+    
+    var iWidthOffset = parseInt(document.getElementById("IdWidthOffset").value);
+    var iHeightOffset = parseInt(document.getElementById("IdHeightOffset").value);
+    var iWidth = Math.floor((oCtx.canvas.width -  iWidthOffset * 2) / giColumn);
+    var iHeight = Math.floor((oCtx.canvas.height - iHeightOffset * 2) / giRow);
+    
+    //addCuttedImageInfo(" (Width:" + iWidth + ", Height:" + iHeight + ")");
+    
+    var sOriginalFileName = this.fileName.substring(0, this.fileName.length - 4);
+
+    for (var i = 0; i < giRow; i++)
+    {
+        for (var j = 0; j < giColumn; j++)
+        {
+            var iNo = i * giColumn + j;
+            var oImageData = oCtx.getImageData(iWidthOffset + j * iWidth, iHeightOffset + i * iHeight, iWidth, iHeight);
+            var eCanvas = createCuttedImage(oImageData, iWidth, iHeight, iNo);
+
+            if (iNo == giRow * giColumn - 1) // last one would be removed
+            {
+                eCanvas = createDummyImage(iWidth, iHeight, iNo);
+            }
+
+            gaeCuttedCanvas[iNo] = eCanvas;
+        }
+    }
+    
+    randomizeTable(30);
+    
+    createTable();
+    
+    updateTimerInfo();
+    
+    setInterval(updateTimerInfo, 1000); // update timer infomation per second
+}
+
+function createTable()
+{    
+    var eTable = document.getElementById("IdTableCUttedImage");
+
+    for (var i = 0; i < giRow; i++)
+    {
+        var eRow = eTable.insertRow(i);
+        
+        for (var j = 0; j < giColumn; j++)
+        {
+            var eCell = eRow.insertCell(j);
+            var iNo = i * giColumn + j;
+            
+            eCell.appendChild(gaeCuttedCanvas[iNo]);
+            eCell.no = iNo;
+            addTouchListener(eCell);
+            
+            if (giDummyNo == iNo)
+            {
+                //eCell.style.border = "2px green solid";
+            }
+        }
+    }
+}
+
+function createCuttedImage(oImageData, iWidth, iHeight, iNo)
+{
+    var eCanvas = document.createElement("canvas");
+    var oCtx = eCanvas.getContext("2d");
+    
+    eCanvas.className = "CuttedCanvas";
+    eCanvas.originalNo = iNo;
+    eCanvas.isDummy = false;
+    
+    oCtx.canvas.width = iWidth;
+    oCtx.canvas.height = iHeight;
+    oCtx.putImageData(oImageData, 0, 0);
+
+    return eCanvas;
+}
+
+function createDummyImage(iWidth, iHeight, iNo)
+{
+    var eCanvas = document.createElement("canvas");
+    var oCtx = eCanvas.getContext("2d");
+
+    eCanvas.className = "CuttedCanvas";
+    eCanvas.originalNo = iNo;
+    eCanvas.isDummy = true;
+    
+    oCtx.canvas.width = iWidth;
+    oCtx.canvas.height = iHeight;
+    
+    oCtx.strokeStyle = "green";
+    oCtx.lineWidth = iWidth / 10;
+    
+    // draw a line from left-top to right-buttom
+    oCtx.beginPath();
+    oCtx.moveTo(0, 0);
+    oCtx.lineTo(iWidth, iHeight);
+    oCtx.stroke();
+    
+    // draw a line from right-top to left-buttom
+    oCtx.beginPath();
+    oCtx.moveTo(iWidth, 0);
+    oCtx.lineTo(0, iHeight);
+    oCtx.stroke();
+    
+    giDummyNo = iNo;
+
+    return eCanvas;
+}
+
+function deleteAllCuttedImage()
+{
+    document.getElementById("IdTableCUttedImage").innerHTML = "";
+}
+
+function rebuildTable()
+{
+    deleteAllCuttedImage();
+    createTable();
+}
+
+function addTouchListener(element)
+{
+    element.addEventListener("mouseup", tapOrClick, false);
+    element.addEventListener("touchend", tapOrClick, false);
+}
+
+function tapOrClick(event) 
+{
+    if (swapCuttedCanvas(giDummyNo, this.no))
+    {
+        giDummyNo = this.no;
+    }
+    rebuildTable();
+    
+    if (finishPuzzle())
+    {
+        alert("Congratulations !!  You won !!");
+    }
+    
+    event.preventDefault();
+    return false;
+}
+
+function swapCuttedCanvas(iA, iB)
+{
+    var iMax = giRow * giColumn - 1;
+    
+    if ((gaeCuttedCanvas[iA].isDummy || gaeCuttedCanvas[iB].isDummy) &&
+        (iA >= 0 && iA <= iMax && iB >= 0 && iB <= iMax) && 
+        (iA == iB + 1 || iA == iB - 1 || iA == iB + giColumn || iA == iB - giColumn))
+    {
+        var eCanvas = gaeCuttedCanvas[iA];
+        gaeCuttedCanvas[iA] = gaeCuttedCanvas[iB];
+        gaeCuttedCanvas[iB] = eCanvas;
+    
+        //console.log("#swap success: " + iA + " -> " + iB);
+    
+        return true;
+    }
+    else
+    {
+        //console.log("#swap fail: " + iA + " -> " + iB);
+        
+        return false;
+    }
+}
+
+function randomizeTable(iCount)
+{
+    var iDummy = giDummyNo;
+    
+    for (var i = 0; i < iCount; i ++)
+    {
+        var aiB = [iDummy + 1, iDummy - 1, iDummy + giColumn, iDummy - giColumn];
+        var iTarget = aiB[Math.floor(Math.random() * 4)];
+        
+        if (swapCuttedCanvas(iDummy, iTarget))
+        {
+            iDummy = iTarget;
+        }
+    }
+    
+    giDummyNo = iDummy;
+}
+
+function finishPuzzle()
+{
+    for (var i = 0; i < gaeCuttedCanvas.length; i++)
+    {
+        if (gaeCuttedCanvas[i].originalNo != i)
+        {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+function createDownloadButton(sText, sFileName, sDataUrl)
+{
+    var eHref = document.createElement("a");
+    eHref.download = sFileName;
+    eHref.text = sText;
+    eHref.href = sDataUrl;
+    
+    return eHref;
+}
+
+function createText(sText)
+{
+    return document.createTextNode(sText);
+}
+
+    
+
+</script>
+</head>
+<style type='text/css'>
+    .InputNumber{
+        width:50px;
+        display:inline-block;
+    }
+    .Title {
+        background: green;
+    }
+</style>
+<body>
+    <p class="Title">Config : </p>
+    <table style="width:90%;">
+        <tr>
+            <td>Column : </td>
+            <td><input type="number" id="IdInputColumn" value="4" class="InputNumber" min="1" max="20"></input></td> 
+            <td>Width Scale : </td>
+            <td><input type="number" id="IdWidthScale" value="1" class="InputNumber" min="0.1" max="20" step="0.1"></input></td> 
+            <td>Left/Right Offset (pixels) : </td>
+            <td><input type="number" id="IdWidthOffset" value="0" class="InputNumber"></input></td> 
+        </tr>
+        <tr>
+            <td>Row : </td>
+            <td><input type="number" id="IdInputRow" value="4" class="InputNumber" min="1" max="20"></input></td>
+            <td>Height Scale : </td>
+            <td><input type="number" id="IdHeightScale" value="1" class="InputNumber" min="0.1" max="20" step="0.1"></input></td>
+            <td>Top/Buttom Offset (pixels) : </td>
+            <td><input type="number" id="IdHeightOffset" value="0" class="InputNumber"></input></td>
+        </tr>
+    </table>
+    <div></div>
+    <div></div>
+    
+    <p class="Title">Select a Image file :</p>
+    <input type="file" id="IdInputImageFile" onchange="loadImageFile();"></input>
+    <input type="button" value="Remake" onclick="loadImageFile();"></input><br></br>
+    
+    <p id="IdCuttedImageInfo" class="Title"></p>
+    <table id="IdTableCUttedImage" style="border:3px #cccccc solid;" cellpadding="0" border='1'></table>
+</body>
+</html>
