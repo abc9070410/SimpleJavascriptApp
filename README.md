@@ -1,7 +1,5 @@
 # SimpleJavascriptApp
 
-![res](screenshot/screen01_ImagePuzzle.jpg)
-
 ### ImageCutter 
 - A tool which could cut the image to multiple parts with same width and same height.
 
@@ -25,7 +23,3 @@
 ## License
 
 - The MIT License (http://opensource.org/licenses/MIT)
-
-  
--   
-  
