@@ -1,0 +1,559 @@
+<!--
+
+The MIT License (MIT)
+
+Copyright (c) 2014-2015 SurveyorK
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-->
+
+<html>
+<head>
+	<meta charset="utf-8">
+    <title>Image Resizer</title>
+    
+<script type="text/javascript">
+    
+// Recommended browser : Chrome
+
+var gbFirstTouch = true;
+var gbBorderExisted = false;
+
+var ICON_ANDROID = [
+    "LDPI (36 x 36)", 
+    "MDPI (48 x 48)", 
+    "TVDPI (64 x 64)", 
+    "HDPI (72 x 72)",
+    "XHDPI (96 x 96)",
+    "XXHDPI (144 x 144", 
+    "XXXHDPI (192 x 192)",
+    "Store (512 x 512)"
+    ];    
+var SPLASH_SCREEN_ANDROID = [
+    "PORTRAIT LDPI (200 x 320)",
+    "PORTRAIT MDPI (320 x 480)",
+    "PORTRAIT HDPI (480 x 800)",
+    "PORTRAIT XHDPI (720 x 1280)",
+    "LANDSCAPE LDPI (320 x 200)",
+    "LANDSCAPE MDPI (480 x 320)",
+    "LANDSCAPE HDPI (800 x 480)",
+    "LANDSCAPE XHDPI (1280 x 720)"
+    ];
+    
+var ICON_WINDOWS_PHONE_8 = [
+    "ApplicationIcon (62 x 62)",
+    "Background (173 x 173)",
+    "SmallAppTile (99 x 99)",
+    "MarketplaceTile (200 x 200)"
+    ];    
+var SPLASH_SCREEN_WINDOWS_PHONE_8 = [
+    "WVGA (480 x 800)",
+    "WXGA (768 x 1280)",
+    "720p (720 x 1280)"
+    ];
+    
+var ICON_WINDOWS_81 = [
+    "Store (50 x 50)",
+    "Store (70 x 70)",
+    "Store (90 x 90)",
+    "Wide Logo (248 x 120)",
+    "Wide Logo (310 x 150)",
+    "Wide Logo (434 x 210)",
+    "Wide Logo (558 x 270)",
+    "Square Logo (120 x 120)",
+    "Square Logo (150 x 150)",
+    "Square Logo (210 x 210)",
+    "Square Logo (270 x 270)",
+    "Square Logo (310 x 310)",
+    "Windows 8 Legacy Icon (16 x 16)",
+    "Windows 8 Legacy Icon (24 x 24)",
+    "Windows 8 Legacy Icon (32 x 32)",
+    "Windows 8 Legacy Icon (48 x 48)",
+    "Windows 8 Legacy Icon (256 x 256)"
+    ];    
+var SPLASH_SCREEN_WINDOWS_81 = [
+    "Splash Screen 1.0x (620 x 300)",
+    "Splash Screen 1.4x (868 x 420)",
+    "Splash Screen 1.8x (1116 x 540)"
+    ];
+    
+var ICON_PLATFORM = [];
+var SPLASH_SCREEN_PLATFORM = [];
+var NAME_PLATFORM = [];
+
+function initPlatform()
+{
+    ICON_PLATFORM = [];
+    SPLASH_SCREEN_PLATFORM = [];
+    NAME_PLATFORM = [];
+    
+    if (document.getElementById("IdCheckAndroid").checked)
+    {
+        ICON_PLATFORM[ICON_PLATFORM.length] = ICON_ANDROID;
+        SPLASH_SCREEN_PLATFORM[SPLASH_SCREEN_PLATFORM.length] = SPLASH_SCREEN_ANDROID;
+        NAME_PLATFORM[NAME_PLATFORM.length] = "Android";
+    }
+    if (document.getElementById("IdCheckWindowsPhone8").checked)
+    {
+        ICON_PLATFORM[ICON_PLATFORM.length] = ICON_WINDOWS_PHONE_8;
+        SPLASH_SCREEN_PLATFORM[SPLASH_SCREEN_PLATFORM.length] = SPLASH_SCREEN_WINDOWS_PHONE_8;
+        NAME_PLATFORM[NAME_PLATFORM.length] = "Windows 8";
+    }
+    if (document.getElementById("IdCheckWindows81").checked)
+    {
+        ICON_PLATFORM[ICON_PLATFORM.length] = ICON_WINDOWS_81;
+        SPLASH_SCREEN_PLATFORM[SPLASH_SCREEN_PLATFORM.length] = SPLASH_SCREEN_WINDOWS_81;
+        NAME_PLATFORM[NAME_PLATFORM.length] = "Windows 8.1";
+    }
+}    
+    
+function loadImageFile()
+{
+    var eFiles = document.getElementById("IdInputImageFile").files;
+    
+    initPlatform();
+    
+    if (eFiles.length > 0)
+    {
+        deleteAllResizedImage();
+        deleteAllImageInfo();
+        
+        var eFile = eFiles[0];
+        var oFileReader = new FileReader();
+        
+        oFileReader.onload = function(event)
+        {
+            drawImage(event.target.result, eFile.name);
+        }
+        oFileReader.readAsDataURL(eFile);
+    }
+}
+
+function addOriginalImageInfo(sInfo)
+{
+    var eDiv = document.getElementById("IdOriginalImageInfo");
+    eDiv.innerHTML += sInfo;
+}
+
+function deleteAllImageInfo()
+{
+    document.getElementById("IdOriginalImageInfo").innerHTML = "The Original Image : ";
+    document.getElementById("IdIconImageInfo").innerHTML = "The Resized Icons : ";
+    document.getElementById("IdSplashScreenImageInfo").innerHTML = "The Resized Splash Screens : ";
+}
+
+function onloadOriginalImage()
+{
+    var eCanvas = document.getElementById("IdCanvasOriginalImage");
+    var oCtx = eCanvas.getContext("2d");
+
+    addOriginalImageInfo(" (Width:" + this.width + ", Height:" + this.height + ")");
+    
+    oCtx.canvas.width = this.width;
+    oCtx.canvas.height = this.height;
+    oCtx.drawImage(this, 0, 0);
+    
+    addTouchListener(eCanvas);
+    
+    var iLeftOffset = parseInt(document.getElementById("IdLeftOffset").value);
+    var iRightOffset = parseInt(document.getElementById("IdRightOffset").value);
+    var iTopOffset = parseInt(document.getElementById("IdTopOffset").value);
+    var iButtomOffset = parseInt(document.getElementById("IdButtomOffset").value);
+    var iWidth = Math.floor(oCtx.canvas.width -  iLeftOffset - iRightOffset);
+    var iHeight = Math.floor(oCtx.canvas.height - iTopOffset - iButtomOffset);
+    
+    var oImageData = oCtx.getImageData(iLeftOffset, iTopOffset, iWidth, iHeight);
+    var sFileName = this.fileName;
+    var sDataUrl = createCanvas(oImageData).toDataURL();
+    
+    var eIconDiv = document.getElementById("IdIconImage");
+    var eSplashScreenDiv = document.getElementById("IdSplashScreenImage");
+    var sIconFileName = document.getElementById("IdIconFileName").value;
+    var sSplashScreenFileName = document.getElementById("IdSplashScreenFileName").value;
+    
+    createTable(ICON_PLATFORM, sDataUrl, sIconFileName, eIconDiv);
+    createTable(SPLASH_SCREEN_PLATFORM, sDataUrl, sSplashScreenFileName, eSplashScreenDiv);
+    
+    drawBorder(eCanvas);
+}
+
+function createCanvas(oImageData)
+{
+    var eCanvas = document.createElement("canvas");
+    var oCtx = eCanvas.getContext("2d");
+    eCanvas.className = "CuttedCanvas";
+    oCtx.canvas.width = oImageData.width;
+    oCtx.canvas.height = oImageData.height;
+    oCtx.putImageData(oImageData, 0, 0);
+
+    return eCanvas;
+}
+
+function drawImage(sDataUrl, sFileName)
+{
+    var oOriginalImage = new Image;
+
+    oOriginalImage.onload = onloadOriginalImage;
+    oOriginalImage.fileName = sFileName;
+    oOriginalImage.src = sDataUrl;
+}
+
+function createTable(aasSize, sDataUrl, sFileName, eDiv)
+{
+    for (var i = 0; i < aasSize.length; i++)
+    {
+        var eTable = document.createElement("table");
+        
+        eTable.className = "ImageTable";
+        
+        var eRow = eTable.insertRow(0);
+        
+        for (var j = 0; j < aasSize[i].length; j++)
+        {         
+            var eCell = eRow.insertCell(j);
+            
+            var oScaleImage = new Image;
+
+            oScaleImage.onload = onloadResizedImage;
+            oScaleImage.fileName = sFileName;
+            oScaleImage.text = aasSize[i][j];
+            oScaleImage.cell = eCell;
+            oScaleImage.src = sDataUrl;
+        }
+        
+        eDiv.appendChild(createTitle(NAME_PLATFORM[i]));
+        eDiv.appendChild(eTable);
+    }
+}
+
+function createTitle(sText)
+{
+    var eH = document.createElement("h3");
+    eH.innerHTML = sText;
+    
+    return eH;
+}
+
+function onloadResizedImage()
+{
+    var eCanvas = document.createElement("canvas");
+    var oCtx = eCanvas.getContext("2d");
+    
+    eCanvas.className = "ResizedCanvas";
+
+    var sTemp = this.text.split(/[(|)]+/)[1];
+    var asTemp = sTemp.split("x");
+    var iWidth = parseInt(asTemp[0].trim());
+    var iHeight = parseInt(asTemp[1].trim());
+    var sText = this.text.replace("(", "<br>(");
+
+    //console.log("#TEXT:" + this.text + "____" + asTemp);
+
+    oCtx.canvas.width = iWidth;
+    oCtx.canvas.height = iHeight;
+    oCtx.drawImage(this, 0, 0, iWidth, iHeight);
+
+    var sFileName = this.fileName;
+    var sDataUrl = sFileName.indexOf(".png") > 0 ? eCanvas.toDataURL() : eCanvas.toDataURL("image/jpeg", 0.7);
+    
+    var eCell = this.cell;
+    var eHref = createDownloadButton(sText, sFileName, sDataUrl);
+    
+    //eCell.appendChild(eCanvas);
+    //eCell.appendChild(createText("\n"));
+    eCell.appendChild(eHref);
+}
+
+function createCuttedImage(oImageData, iWidth, iHeight)
+{
+    var eCanvas = document.createElement("canvas");
+    var oCtx = eCanvas.getContext("2d");
+    
+    eCanvas.className = "CuttedCanvas";
+    oCtx.canvas.width = oImageData.width;
+    oCtx.canvas.height = oImageData.height;
+    oCtx.putImageData(oImageData, 0, 0);
+
+    return eCanvas;
+}
+
+function deleteAllResizedImage()
+{
+    document.getElementById("IdIconImage").innerHTML = "";
+    document.getElementById("IdSplashScreenImage").innerHTML = "";
+}
+
+function createDownloadButton(sText, sFileName, sDataUrl)
+{
+    var eHref = document.createElement("a");
+    eHref.download = sFileName;
+    eHref.innerHTML = sText;
+    eHref.href = sDataUrl;
+    
+    return eHref;
+}
+
+function createText(sText)
+{
+    return document.createTextNode(sText);
+}
+
+function addTouchListener(element)
+{
+    element.addEventListener("mousemove", tapOrClick, false);
+    //element.addEventListener("touchend", tapOrClick, false);
+}
+
+
+function tapOrClick(event)
+{
+    var iX = Math.floor(event.offsetX);
+    var iY = Math.floor(event.offsetY);
+    
+    //console.log(":" + iX + "," + iY + "," + event.target.width + "," + event.target.height);
+    
+    if (gbFirstTouch)
+    {
+        document.getElementById("IdLeftOffset").value = iX;
+        document.getElementById("IdTopOffset").value = iY;
+        
+        gbFirstTouch = false;
+        gbBorderExisted = false;
+        
+        drawCircle(event.target, iX, iY);
+    }
+    // two positions cannot be too close
+    else if (Math.abs(iX - document.getElementById("IdLeftOffset").value) > 10 || 
+             Math.abs(iY - document.getElementById("IdTopOffset").value) > 10)
+    {
+        document.getElementById("IdRightOffset").value = event.target.width - iX;
+        document.getElementById("IdButtomOffset").value = event.target.height - iY;
+        
+        gbFirstTouch = true;
+        gbBorderExisted = true;
+        
+        loadImageFile();
+    }
+
+    event.preventDefault();
+    return false;
+}
+
+function drawCircle(eCanvas, iX, iY)
+{
+    var oCtx = eCanvas.getContext("2d");
+    
+    oCtx.beginPath();
+    oCtx.arc(iX, iY, eCanvas.width / 100, 0, 2 * Math.PI);
+    oCtx.stroke();
+}
+
+function drawBorder(eCanvas)
+{
+    var iLeft = parseInt(document.getElementById("IdLeftOffset").value);
+    var iRight = parseInt(document.getElementById("IdRightOffset").value);
+    var iTop = parseInt(document.getElementById("IdTopOffset").value);
+    var iButtom = parseInt(document.getElementById("IdButtomOffset").value);
+    var oCtx = eCanvas.getContext("2d");
+    
+    oCtx.lineWidth = parseInt(eCanvas.width / 100);
+    oCtx.strokeStyle = "red";
+    
+    oCtx.moveTo(iLeft, iTop);
+    oCtx.lineTo(iLeft, eCanvas.height - iButtom);
+    oCtx.stroke();
+    
+    oCtx.moveTo(iLeft, eCanvas.height - iButtom);
+    oCtx.lineTo(eCanvas.width - iRight, eCanvas.height - iButtom);
+    oCtx.stroke();
+    
+    oCtx.moveTo(eCanvas.width - iRight, eCanvas.height - iButtom);
+    oCtx.lineTo(eCanvas.width - iRight, iTop);
+    oCtx.stroke();
+    
+    oCtx.moveTo(eCanvas.width - iRight, iTop);
+    oCtx.lineTo(iLeft, iTop);
+    oCtx.stroke();   
+}
+
+/*
+# Android
+    Icon : 
+        LDPI should be 36 x 36.
+        MDPI should be 48 x 48.
+        TVDPI should be 64 x 64.
+        HDPI should be 72 x 72.
+        XHDPI should be 96 x 96.
+        XXHDPI should be 144 x 144.
+        XXXHDPI should be 192 x 192.
+    Splash Screen :
+        PORTRAIT
+
+LDPI: 200x320px
+
+MDPI: 320x480px
+
+HDPI: 480x800px
+
+XHDPI: 720px1280px
+
+LANDSCAPE
+
+LDPI: 320x200px
+
+MDPI: 480x320px
+
+HDPI: 800x480px
+
+XHDPI: 1280x720px
+
+# Windows Phone 8
+    Icon :
+        ApplicationIcon Image size: 62x62 pixels
+        Background Image size: 173x173 pixels
+        SmallAppTile Image size: 99x99 pixels
+        MarketplaceTile Image size: 200x200 pixels
+    Splash Screen :
+        WVGA 480 × 800 SplashScreenImage.screen-WVGA.jpg
+        WXGA 768 × 1,280 SplashScreenImage.screen-WXGA.jpg
+        720p 720 x× 1,280 SplashScreenImage.screen-720p.jpg
+    
+# Windows 8
+    Icon :
+        Store logo	N/A	50x50	70x70	90x90	Package/Properties/Logo
+        Square150x150Logo	120x120	150x150	210x210	270x270	VisualElements/@Square150x150Logo
+        Square30x30Logo	24x24	30x30	42x42	54x54	VisualElements/@Square30x30Logo
+        Wide310x150Logo	248x120	310x150	434x210	558x270	VisualElements/DefaultTile/ @Wide310x150Logo
+        Square310x310Logo	248x248	310x310	434x434	558x558	VisualElements/DefaultTile/ @Square310x310Logo
+        Square70x70Logo	56x56	70x70	98x98	126x126	VisualElements/DefaultTile/ @Square70x70Logo
+        Badge logo	N/A	24x24	33x33	43x43	VisualElements/LockScreen
+    Splash Screen :
+        N/A	620x300	868x420	1116x540	VisualElements/SplashScreen
+    
+# IOS
+    Tablet (iPad)
+        Non-Retina (1x)
+        Portrait: 768x1024px
+        Landscape: 1024x768px
+        Retina (2x)
+        Portrait: 1536x2048px
+        Landscape: 2048x1536px
+    Handheld (iPhone, iPod)
+        Non-Retina (1x)
+        Portrait: 320x480px
+        Landscape: 480x320px
+        Retina (2x)
+        Portrait: 640x960px
+        Landscape: 960x640px
+        iPhone 5 Retina (2x)
+        Portrait: 640x1136px
+        Landscape: 1136x640px
+        iPhone 6 (2x)
+        Portrait: 750x1334px
+        Landscape: 1334x750px
+        iPhone 6 Plus (3x)
+        Portrait: 1242x2208px
+        Landscape: 2208x1242px
+    
+*/
+
+</script>
+</head>
+<style type='text/css'>
+    .InputNumber{
+        width:50px;
+        display:inline-block;
+    }
+    .InputText{
+        width:150px;
+        display:inline-block;
+    }
+    .Title {
+        background: green;
+    }
+    
+    .ImageTable{
+        border:3px #cccccc solid;
+        border-collapse: separate;
+        border-spacing: 2px; /*cellspacing */
+        border-style:double;
+        //border-collapse: collapse;
+
+    }
+    
+    .ImageTable td, .ImageTable th {
+        border:3px #cccccc solid;
+        border-collapse: collapse;
+        border-spacing: 2px; /*cellspacing */
+        //border-style:double;
+    }
+    
+    .DarkBody{
+        background-color:black;
+        color:white;
+    }
+</style>
+<body class="DarkBody">
+    <p class="Title">Platform : </p>
+    <table style="width:90%;">
+        <tr>
+            <td>Android : </td>
+            <td><input type="checkbox" id="IdCheckAndroid" checked=></input></td>
+            <td>Windows Phone 8 : </td>
+            <td><input type="checkbox" id="IdCheckWindowsPhone8""></input></td>
+            <td>Windows 8.1 : </td>
+            <td><input type="checkbox" id="IdCheckWindows81""></input></td>
+        </tr>
+    </table>
+    <p class="Title">Config : </p>
+    <table style="width:90%;">
+        <tr>
+            <td>Icon Name : </td>
+            <td><input type="text" id="IdIconFileName" value="icon.png" class="InputText"></input></td> 
+            <td>Left Offset (pixels) : </td>
+            <td><input type="number" id="IdLeftOffset" value="1" class="InputNumber" min="0"></input></td> 
+            <td>Top Offset (pixels) : </td>
+            <td><input type="number" id="IdTopOffset" value="1" class="InputNumber" min="0"></input></td> 
+        </tr>
+        <tr>
+            <td>SplashScreen Name : </td>
+            <td><input type="text" id="IdSplashScreenFileName" value="splashscreen.png" class="InputText"></input></td>
+            <td>Right Offset (pixels) : </td>
+            <td><input type="number" id="IdRightOffset" value="1" class="InputNumber" min="0"></input></td>
+            <td>Buttom Offset (pixels) : </td>
+            <td><input type="number" id="IdButtomOffset" value="1" class="InputNumber" min="0"></input></td>
+        </tr>
+    </table>
+    <div></div>
+    <div></div>
+    
+    <p class="Title">Select a Image file :</p>
+    <input type="file" id="IdInputImageFile" onchange="loadImageFile();"></input>
+    <input type="button" value="Remake" onclick="loadImageFile();"></input>　　　　
+    <br></br>
+    <div id="IdOriginalImageInfo" class="Title"></div>
+    <canvas id="IdCanvasOriginalImage"></canvas>
+    
+    <p id="IdIconImageInfo" class="Title"></p>
+    <div id="IdIconImage"></div>
+    <p id="IdSplashScreenImageInfo" class="Title"></p>
+    <div id="IdSplashScreenImage"></div>
+</body>
+</html>
