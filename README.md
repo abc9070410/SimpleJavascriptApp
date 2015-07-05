@@ -2,9 +2,14 @@
 
 ![res](screenshot/screen01_ImagePuzzle.jpg)
 
-- ImageCutter : A tool which could cut the image to multiple parts with same width and same height.
-- ImagePuzzle : A puzzle game which allows the user choices any background picture.
-- ImageResizer : A tool which could make multiple icons and splashscreens simultaneously for multiple platforms.
+### ImageCutter 
+- A tool which could cut the image to multiple parts with same width and same height.
+
+### ImagePuzzle
+- A puzzle game which allows the user choices any background picture.
+
+### ImageResizer
+- A tool which could make multiple icons and splashscreens simultaneously for multiple platforms.
 
 ## Demo
 
