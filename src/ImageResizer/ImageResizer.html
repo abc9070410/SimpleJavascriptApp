@@ -29,12 +29,23 @@ THE SOFTWARE.
 	<meta charset="utf-8">
     <title>Image Resizer</title>
     
+    <script type="text/javascript" charset="utf-8" src="jszip.min.js"></script>
 <script type="text/javascript">
     
 // Recommended browser : Chrome
 
+var IMAGE_ICON = 1;
+var IMAGE_SPLASHSCREEN = 2;
+
 var gbFirstTouch = true;
 var gbBorderExisted = false;
+
+var gaOriginalImageDataUrl = [];
+
+var gZip = new JSZip();
+var gaaZipIconDirectory;
+var gaaZipSplashScreenDirectory;
+var gaiZipFinishCount;
 
 var ICON_ANDROID = [
     "LDPI (36 x 36)", 
@@ -42,7 +53,8 @@ var ICON_ANDROID = [
     "TVDPI (64 x 64)", 
     "HDPI (72 x 72)",
     "XHDPI (96 x 96)",
-    "XXHDPI (144 x 144", 
+    "XXHDPI (144 x 144)", 
+    "XHDPI (96 x 96)",
     "XXXHDPI (192 x 192)",
     "Store (512 x 512)"
     ];    
@@ -103,24 +115,99 @@ function initPlatform()
     ICON_PLATFORM = [];
     SPLASH_SCREEN_PLATFORM = [];
     NAME_PLATFORM = [];
+    gaaZipIconDirectory = [];
+    gaaZipSplashScreenDirectory = [];
     
     if (document.getElementById("IdCheckAndroid").checked)
     {
         ICON_PLATFORM[ICON_PLATFORM.length] = ICON_ANDROID;
         SPLASH_SCREEN_PLATFORM[SPLASH_SCREEN_PLATFORM.length] = SPLASH_SCREEN_ANDROID;
         NAME_PLATFORM[NAME_PLATFORM.length] = "Android";
+
+        gaaZipIconDirectory[gaaZipIconDirectory.length] = [    
+            gZip.folder("drawable-ldpi"), // 36x36
+            gZip.folder("drawable-mdpi"), // 48x48
+            gZip.folder("drawable-hdpi"), // 72x72
+            gZip.folder("drawable-xhdpi"), // 96x96
+            gZip.folder("drawable-xxhdpi"), // 144x144
+            gZip.folder("drawable") // 96x96
+        ];
+        
+        gaaZipSplashScreenDirectory[gaaZipSplashScreenDirectory.length] = [
+            gZip.folder("drawable-port-hdpi"),
+            gZip.folder("drawable-port-ldpi"),
+            gZip.folder("drawable-port-mdpi"),
+            gZip.folder("drawable-port-xhdpi"),
+            
+            gZip.folder("drawable-land-hdpi"), // 800x480
+            gZip.folder("drawable-land-ldpi"), // 320x200
+            gZip.folder("drawable-land-mdpi"), // 480x320
+            gZip.folder("drawable-land-xhdpi") // 1280x720
+        ];
     }
     if (document.getElementById("IdCheckWindowsPhone8").checked)
     {
         ICON_PLATFORM[ICON_PLATFORM.length] = ICON_WINDOWS_PHONE_8;
         SPLASH_SCREEN_PLATFORM[SPLASH_SCREEN_PLATFORM.length] = SPLASH_SCREEN_WINDOWS_PHONE_8;
-        NAME_PLATFORM[NAME_PLATFORM.length] = "Windows 8";
+        NAME_PLATFORM[NAME_PLATFORM.length] = "Windows Phone 8";
     }
     if (document.getElementById("IdCheckWindows81").checked)
     {
         ICON_PLATFORM[ICON_PLATFORM.length] = ICON_WINDOWS_81;
         SPLASH_SCREEN_PLATFORM[SPLASH_SCREEN_PLATFORM.length] = SPLASH_SCREEN_WINDOWS_81;
         NAME_PLATFORM[NAME_PLATFORM.length] = "Windows 8.1";
+    }
+}
+
+function initZip()
+{
+    gaiZipFinishCount = [];
+    
+    for (var i = 0; i < ICON_PLATFORM.length; i ++)
+    {
+        gaiZipFinishCount[i] = 0;
+    }
+}
+
+function createZipFileTEMP(eDiv)
+{
+    var e = document.createElement("a");
+    
+    var blob = gZip.generate({type:"blob"});
+    var blobUrl = URL.createObjectURL(blob);
+    
+    e.href = blobUrl;
+    e.innerHTML = "DOWNLOAD ZIP";
+    e.download = "sample.zip";
+    //e.addEventListener( 'click', clickSaveZipFile, false );
+    eDiv.appendChild(e);
+}
+
+function clickSaveZipFile()
+{
+    //var blob = base64toBlob(b64Data, "application/zip");
+    var blob = gZip.generate({type:"blob"});
+    var blobUrl = URL.createObjectURL(blob);
+
+    window.location = blobUrl;
+}
+
+function createZipFile()
+{
+    var reader = new FileReader();
+    var eThis = this;
+    
+    reader.readAsDataURL( gZip.generate({type:"blob"}) );    
+    reader.onloadend = function(event) {
+
+        var eHref = createDownloadButton("ZIP", "sample.zip", event.target.result);
+        
+        console.log("#ZIP length: " + event.target.result.length);
+        document.getElementById("IdOriginalImageInfo").appendChild(eHref);
+        
+        //eThis.href = event.target.result.length;
+        //window.open(event.target.result.length, "_blank");
+        //document.location.href = event.target.result.length;
     }
 }    
     
@@ -129,20 +216,30 @@ function loadImageFile()
     var eFiles = document.getElementById("IdInputImageFile").files;
     
     initPlatform();
+    initZip();
     
     if (eFiles.length > 0)
     {
         deleteAllResizedImage();
-        deleteAllImageInfo();
+        initAllImageInfo();
         
-        var eFile = eFiles[0];
-        var oFileReader = new FileReader();
+        gaOriginalImageDataUrl = [];
         
-        oFileReader.onload = function(event)
+        for (var i = 0; i < eFiles.length; i ++)
         {
-            drawImage(event.target.result, eFile.name);
+            var oFileReader = new FileReader();
+            
+            oFileReader.onload = function(event)
+            {
+                gaOriginalImageDataUrl[gaOriginalImageDataUrl.length] = event.target.result;
+                
+                if (gaOriginalImageDataUrl.length == eFiles.length)
+                {
+                    drawOriginalImage();
+                }
+            }
+            oFileReader.readAsDataURL(eFiles[i]);
         }
-        oFileReader.readAsDataURL(eFile);
     }
 }
 
@@ -152,19 +249,36 @@ function addOriginalImageInfo(sInfo)
     eDiv.innerHTML += sInfo;
 }
 
-function deleteAllImageInfo()
+function initAllImageInfo()
 {
     document.getElementById("IdOriginalImageInfo").innerHTML = "The Original Image : ";
+    document.getElementById("IdZipFileInfo").innerHTML = "The Zip Files : ";
     document.getElementById("IdIconImageInfo").innerHTML = "The Resized Icons : ";
     document.getElementById("IdSplashScreenImageInfo").innerHTML = "The Resized Splash Screens : ";
 }
 
+function getImageText(iImageType)
+{
+    return iImageType == IMAGE_ICON ? "Icon" : "SplashScreen";
+}
+
+function getImageFileName(iImageType)
+{
+    var sIconFileName = document.getElementById("IdIconFileName").value;
+    var sSplashScreenFileName = document.getElementById("IdSplashScreenFileName").value;
+    
+    return iImageType == IMAGE_ICON ? sIconFileName : sSplashScreenFileName;
+}
+
 function onloadOriginalImage()
 {
-    var eCanvas = document.getElementById("IdCanvasOriginalImage");
+    var iImageType = this.imageType;
+
+    var sImageID = iImageType == IMAGE_ICON ? "IdCanvasOriginalIconImage" : "IdCanvasOriginalSplashScreenImage";
+    var eCanvas = document.getElementById(sImageID);
     var oCtx = eCanvas.getContext("2d");
 
-    addOriginalImageInfo(" (Width:" + this.width + ", Height:" + this.height + ")");
+    addOriginalImageInfo(getImageText(iImageType) + "(Width:" + this.width + ", Height:" + this.height + ") ");
     
     oCtx.canvas.width = this.width;
     oCtx.canvas.height = this.height;
@@ -180,18 +294,19 @@ function onloadOriginalImage()
     var iHeight = Math.floor(oCtx.canvas.height - iTopOffset - iButtomOffset);
     
     var oImageData = oCtx.getImageData(iLeftOffset, iTopOffset, iWidth, iHeight);
-    var sFileName = this.fileName;
     var sDataUrl = createCanvas(oImageData).toDataURL();
     
-    var eIconDiv = document.getElementById("IdIconImage");
-    var eSplashScreenDiv = document.getElementById("IdSplashScreenImage");
-    var sIconFileName = document.getElementById("IdIconFileName").value;
-    var sSplashScreenFileName = document.getElementById("IdSplashScreenFileName").value;
+    gZip.file(getImageFileName(iImageType), dataUrlToBase64(sDataUrl), {base64: true});
     
-    createTable(ICON_PLATFORM, sDataUrl, sIconFileName, eIconDiv);
-    createTable(SPLASH_SCREEN_PLATFORM, sDataUrl, sSplashScreenFileName, eSplashScreenDiv);
-    
+    createTable(iImageType, sDataUrl);
+
     drawBorder(eCanvas);
+}
+
+function dataUrlToBase64(sDataUrl)
+{
+    var iBegin = sDataUrl.indexOf( "," ) + 1;
+    return sDataUrl.substring( iBegin, sDataUrl.length );
 }
 
 function createCanvas(oImageData)
@@ -206,19 +321,95 @@ function createCanvas(oImageData)
     return eCanvas;
 }
 
-function drawImage(sDataUrl, sFileName)
+function drawOriginalImage()
 {
-    var oOriginalImage = new Image;
+    var sIconDataUrl;
+    var sSplashScreenDataUrl;
+    
+    if (gaOriginalImageDataUrl.length > 1)
+    {
+        if (gaOriginalImageDataUrl[0].length > gaOriginalImageDataUrl[1].length)
+        {
+            sIconDataUrl = gaOriginalImageDataUrl[1];
+            sSplashScreenDataUrl = gaOriginalImageDataUrl[0];
+        }
+        else
+        {
+            sIconDataUrl = gaOriginalImageDataUrl[0];
+            sSplashScreenDataUrl = gaOriginalImageDataUrl[1];
+        }
+    }
+    else
+    {
+        sIconDataUrl = sSplashScreenDataUrl = gaOriginalImageDataUrl[0];
+    }
+    
+    
+    var oOriginalIconImage = new Image;
 
-    oOriginalImage.onload = onloadOriginalImage;
-    oOriginalImage.fileName = sFileName;
-    oOriginalImage.src = sDataUrl;
+    oOriginalIconImage.imageType = IMAGE_ICON;
+    oOriginalIconImage.onload = onloadOriginalImage;
+    oOriginalIconImage.src = sIconDataUrl;
+    
+    var oOriginalSplashScreenImage = new Image;
+
+    oOriginalSplashScreenImage.imageType = IMAGE_SPLASHSCREEN;
+    oOriginalSplashScreenImage.onload = onloadOriginalImage;
+    oOriginalSplashScreenImage.src = sSplashScreenDataUrl;
 }
 
-function createTable(aasSize, sDataUrl, sFileName, eDiv)
+function createZipTable()
 {
+    var eTable = document.createElement("table");
+        
+    eTable.className = "ImageTable";
+    
+    var eRow = eTable.insertRow(0);
+    var i;
+ 
+    for (i = 0; i < NAME_PLATFORM.length; i++)
+    {
+        var eCell = eRow.insertCell(i);
+        
+        eCell.appendChild(createText(NAME_PLATFORM[i]));
+    }
+    
+    var eRow = eTable.insertRow(1);
+ 
+    for (i = 0; i < NAME_PLATFORM.length; i++)
+    {
+        var eCell = eRow.insertCell(i);
+        var reader = new FileReader();
+
+        var blob = gZip.generate({type:"blob"});
+        var blobUrl = URL.createObjectURL(blob);
+        
+        var sZipFileName = "sample.zip";
+        var eHref = createDownloadButton(sZipFileName, sZipFileName, blobUrl);
+        console.log("#ZIP length: " + blobUrl.length);
+        eCell.appendChild(eHref);
+    }
+    
+    var eDiv = document.getElementById("IdZipFile");
+    eDiv.appendChild(eTable);
+}
+
+function createTable(iImageType, sDataUrl)
+{
+    var eIconDiv = document.getElementById("IdIconImage");
+    var eSplashScreenDiv = document.getElementById("IdSplashScreenImage");
+    var sIconFileName = document.getElementById("IdIconFileName").value;
+    var sSplashScreenFileName = document.getElementById("IdSplashScreenFileName").value;
+    
+    var aasSize = iImageType == IMAGE_ICON ? ICON_PLATFORM : SPLASH_SCREEN_PLATFORM;
+    var sFileName = iImageType == IMAGE_ICON ? sIconFileName : sSplashScreenFileName;
+    var eDiv = iImageType == IMAGE_ICON ? eIconDiv : eSplashScreenDiv;
+    
+
     for (var i = 0; i < aasSize.length; i++)
     {
+        var aaZipDirectory = iImageType == IMAGE_ICON ? gaaZipIconDirectory : gaaZipSplashScreenDirectory;
+        
         var eTable = document.createElement("table");
         
         eTable.className = "ImageTable";
@@ -231,6 +422,9 @@ function createTable(aasSize, sDataUrl, sFileName, eDiv)
             
             var oScaleImage = new Image;
 
+            oScaleImage.zipDir = aaZipDirectory[i].length <= j ? null : aaZipDirectory[i][j];
+            oScaleImage.imageType = iImageType;
+            oScaleImage.platformIndex = i;
             oScaleImage.onload = onloadResizedImage;
             oScaleImage.fileName = sFileName;
             oScaleImage.text = aasSize[i][j];
@@ -270,11 +464,24 @@ function onloadResizedImage()
     oCtx.canvas.height = iHeight;
     oCtx.drawImage(this, 0, 0, iWidth, iHeight);
 
+    var index = this.platformIndex;
     var sFileName = this.fileName;
     var sDataUrl = sFileName.indexOf(".png") > 0 ? eCanvas.toDataURL() : eCanvas.toDataURL("image/jpeg", 0.7);
     
     var eCell = this.cell;
     var eHref = createDownloadButton(sText, sFileName, sDataUrl);
+    
+    if (this.zipDir)
+    {
+        this.zipDir.file(sFileName, dataUrlToBase64(sDataUrl), {base64: true});
+        console.log("#I:" + sDataUrl.length);
+
+        if (++gaiZipFinishCount[index] == (gaaZipIconDirectory[index].length + gaaZipSplashScreenDirectory[index].length))
+        {
+            console.log("#ZipFinish:" + gaiZipFinishCount[index]);
+            createZipTable();
+        }
+    }
     
     //eCell.appendChild(eCanvas);
     //eCell.appendChild(createText("\n"));
@@ -296,6 +503,7 @@ function createCuttedImage(oImageData, iWidth, iHeight)
 
 function deleteAllResizedImage()
 {
+    document.getElementById("IdIconImage").innerHTML = "";
     document.getElementById("IdIconImage").innerHTML = "";
     document.getElementById("IdSplashScreenImage").innerHTML = "";
 }
@@ -394,59 +602,7 @@ function drawBorder(eCanvas)
 }
 
 /*
-# Android
-    Icon : 
-        LDPI should be 36 x 36.
-        MDPI should be 48 x 48.
-        TVDPI should be 64 x 64.
-        HDPI should be 72 x 72.
-        XHDPI should be 96 x 96.
-        XXHDPI should be 144 x 144.
-        XXXHDPI should be 192 x 192.
-    Splash Screen :
-        PORTRAIT
 
-LDPI: 200x320px
-
-MDPI: 320x480px
-
-HDPI: 480x800px
-
-XHDPI: 720px1280px
-
-LANDSCAPE
-
-LDPI: 320x200px
-
-MDPI: 480x320px
-
-HDPI: 800x480px
-
-XHDPI: 1280x720px
-
-# Windows Phone 8
-    Icon :
-        ApplicationIcon Image size: 62x62 pixels
-        Background Image size: 173x173 pixels
-        SmallAppTile Image size: 99x99 pixels
-        MarketplaceTile Image size: 200x200 pixels
-    Splash Screen :
-        WVGA 480 × 800 SplashScreenImage.screen-WVGA.jpg
-        WXGA 768 × 1,280 SplashScreenImage.screen-WXGA.jpg
-        720p 720 x× 1,280 SplashScreenImage.screen-720p.jpg
-    
-# Windows 8
-    Icon :
-        Store logo	N/A	50x50	70x70	90x90	Package/Properties/Logo
-        Square150x150Logo	120x120	150x150	210x210	270x270	VisualElements/@Square150x150Logo
-        Square30x30Logo	24x24	30x30	42x42	54x54	VisualElements/@Square30x30Logo
-        Wide310x150Logo	248x120	310x150	434x210	558x270	VisualElements/DefaultTile/ @Wide310x150Logo
-        Square310x310Logo	248x248	310x310	434x434	558x558	VisualElements/DefaultTile/ @Square310x310Logo
-        Square70x70Logo	56x56	70x70	98x98	126x126	VisualElements/DefaultTile/ @Square70x70Logo
-        Badge logo	N/A	24x24	33x33	43x43	VisualElements/LockScreen
-    Splash Screen :
-        N/A	620x300	868x420	1116x540	VisualElements/SplashScreen
-    
 # IOS
     Tablet (iPad)
         Non-Retina (1x)
@@ -471,7 +627,6 @@ XHDPI: 1280x720px
         iPhone 6 Plus (3x)
         Portrait: 1242x2208px
         Landscape: 2208x1242px
-    
 */
 
 </script>
@@ -534,7 +689,7 @@ XHDPI: 1280x720px
         </tr>
         <tr>
             <td>SplashScreen Name : </td>
-            <td><input type="text" id="IdSplashScreenFileName" value="splashscreen.png" class="InputText"></input></td>
+            <td><input type="text" id="IdSplashScreenFileName" value="screen.png" class="InputText"></input></td>
             <td>Right Offset (pixels) : </td>
             <td><input type="number" id="IdRightOffset" value="1" class="InputNumber" min="0"></input></td>
             <td>Buttom Offset (pixels) : </td>
@@ -544,13 +699,23 @@ XHDPI: 1280x720px
     <div></div>
     <div></div>
     
-    <p class="Title">Select a Image file :</p>
-    <input type="file" id="IdInputImageFile" onchange="loadImageFile();"></input>
+    <p class="Title">Select two Image files for Icon and SplashScreen :</p>
+    <input type="file" id="IdInputImageFile" onchange="loadImageFile();" multiple></input>
     <input type="button" value="Remake" onclick="loadImageFile();"></input>　　　　
     <br></br>
     <div id="IdOriginalImageInfo" class="Title"></div>
-    <canvas id="IdCanvasOriginalImage"></canvas>
-    
+    <table style="width:90%;">
+        <tr>
+            <td>Icon : </td>
+            <td>SplashScreen : </td>
+        </tr>
+        <tr>
+            <td><canvas id="IdCanvasOriginalIconImage"></canvas></td>
+            <td><canvas id="IdCanvasOriginalSplashScreenImage"></canvas></td>
+        </tr>
+    </table>
+    <p id="IdZipFileInfo" class="Title"></p>
+    <div id="IdZipFile"></div>
     <p id="IdIconImageInfo" class="Title"></p>
     <div id="IdIconImage"></div>
     <p id="IdSplashScreenImageInfo" class="Title"></p>
