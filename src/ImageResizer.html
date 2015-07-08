@@ -29,34 +29,22 @@ THE SOFTWARE.
 	<meta charset="utf-8">
     <title>Image Resizer</title>
     
-    <script type="text/javascript" charset="utf-8" src="jszip.min.js"></script>
+    <script type="text/javascript" charset="utf-8" src="js/jszip.min.js"></script>
 <script type="text/javascript">
     
 // Recommended browser : Chrome
 
-var IMAGE_ICON = 1;
-var IMAGE_SPLASHSCREEN = 2;
-
-var gbFirstTouch = true;
-var gbBorderExisted = false;
-
-var gaOriginalImageDataUrl = [];
-
-var gZip = new JSZip();
-var gaaZipIconDirectory;
-var gaaZipSplashScreenDirectory;
-var gaiZipFinishCount;
-
 var ICON_ANDROID = [
     "LDPI (36 x 36)", 
     "MDPI (48 x 48)", 
-    "TVDPI (64 x 64)", 
     "HDPI (72 x 72)",
     "XHDPI (96 x 96)",
-    "XXHDPI (144 x 144)", 
-    "XHDPI (96 x 96)",
+    "XXHDPI (144 x 144)",
+    
+    "TVDPI (64 x 64)",
     "XXXHDPI (192 x 192)",
-    "Store (512 x 512)"
+    "Store (512 x 512)",
+    "Featured Image (1024 x 500)"
     ];    
 var SPLASH_SCREEN_ANDROID = [
     "PORTRAIT LDPI (200 x 320)",
@@ -110,13 +98,38 @@ var ICON_PLATFORM = [];
 var SPLASH_SCREEN_PLATFORM = [];
 var NAME_PLATFORM = [];
 
+
+var IMAGE_ICON = 1;
+var IMAGE_SPLASHSCREEN = 2;
+
+var gbFirstTouch = true;
+var gbBorderExisted = false;
+
+var gaOriginalImageDataUrl = [];
+
+var gZip = new JSZip();
+var gaZipDirectory;
+var gaiZipTotalCount;
+var gaiZipFinishCount;
+var gaasZipIconName;
+var gaasZipSplashScreenName;
+var gsZipText = "";
+
+window.onload = initPlatform;
+
 function initPlatform()
 {
+    var sText = "";
+    
     ICON_PLATFORM = [];
     SPLASH_SCREEN_PLATFORM = [];
     NAME_PLATFORM = [];
-    gaaZipIconDirectory = [];
-    gaaZipSplashScreenDirectory = [];
+    gaZipDirectory = [];
+    gaiZipTotalCount = [];
+    gaiZipFinishCount = [];
+    gaasZipIconName = [];
+    gaasZipSplashScreenName = [];
+    gsZipText = "";
     
     if (document.getElementById("IdCheckAndroid").checked)
     {
@@ -124,26 +137,23 @@ function initPlatform()
         SPLASH_SCREEN_PLATFORM[SPLASH_SCREEN_PLATFORM.length] = SPLASH_SCREEN_ANDROID;
         NAME_PLATFORM[NAME_PLATFORM.length] = "Android";
 
-        gaaZipIconDirectory[gaaZipIconDirectory.length] = [    
-            gZip.folder("drawable-ldpi"), // 36x36
-            gZip.folder("drawable-mdpi"), // 48x48
-            gZip.folder("drawable-hdpi"), // 72x72
-            gZip.folder("drawable-xhdpi"), // 96x96
-            gZip.folder("drawable-xxhdpi"), // 144x144
-            gZip.folder("drawable") // 96x96
-        ];
+        gaZipDirectory[gaZipDirectory.length] = gZip.folder("android");
         
-        gaaZipSplashScreenDirectory[gaaZipSplashScreenDirectory.length] = [
-            gZip.folder("drawable-port-hdpi"),
-            gZip.folder("drawable-port-ldpi"),
-            gZip.folder("drawable-port-mdpi"),
-            gZip.folder("drawable-port-xhdpi"),
-            
-            gZip.folder("drawable-land-hdpi"), // 800x480
-            gZip.folder("drawable-land-ldpi"), // 320x200
-            gZip.folder("drawable-land-mdpi"), // 480x320
-            gZip.folder("drawable-land-xhdpi") // 1280x720
-        ];
+        sText = "<platform name='android'>\r\n    <allow-intent href='market:*' />\r\n    <icon src='res/android/ldpi.png' density='ldpi' />\r\n    <icon src='res/android/mdpi.png' density='mdpi' />\r\n    <icon src='res/android/hdpi.png' density='hdpi' />\r\n    <icon src='res/android/xhdpi.png' density='xhdpi' />\r\n    <icon src='res/android/xxhdpi.png' density='xxhdpi' />\r\n    <splash src='res/android/splash-land-ldpi.png' density='land-ldpi'/>\r\n    <splash src='res/android/splash-land-mdpi.png' density='land-mdpi'/>\r\n    <splash src='res/android/splash-land-hdpi.png' density='land-hdpi'/>\r\n    <splash src='res/android/splash-land-xhdpi.png' density='land-xhdpi'/>\r\n    <splash src='res/android/splash-port-ldpi.png' density='port-ldpi'/>\r\n    <splash src='res/android/splash-port-mdpi.png' density='port-mdpi'/>\r\n    <splash src='res/android/splash-port-hdpi.png' density='port-hdpi'/>\r\n    <splash src='res/android/splash-port-xhdpi.png' density='port-xhdpi'/>\r\n    <preference name='SplashScreen' value='screen'/>\r\n    <preference name='SplashScreenDelay' value='2000'/>\r\n    <preference name='SplashMaintainAspectRatio' value='false'/>\r\n</platform>";
+        
+        var asIconName = getZipName(IMAGE_ICON, sText);
+        var asSplashScreenName = getZipName(IMAGE_SPLASHSCREEN, sText);
+        gaasZipIconName[gaasZipIconName.length] = asIconName;
+        gaasZipSplashScreenName[gaasZipSplashScreenName.length] = asSplashScreenName;
+        
+        gsZipText += sText;
+        
+        var iTotalCount = asIconName.length + asSplashScreenName.length;
+        
+        gaiZipTotalCount[gaiZipTotalCount.length] = iTotalCount;
+        gaiZipFinishCount[gaiZipFinishCount.length] = 0;
+        
+        console.log("Android total images : " + iTotalCount);
     }
     if (document.getElementById("IdCheckWindowsPhone8").checked)
     {
@@ -157,16 +167,27 @@ function initPlatform()
         SPLASH_SCREEN_PLATFORM[SPLASH_SCREEN_PLATFORM.length] = SPLASH_SCREEN_WINDOWS_81;
         NAME_PLATFORM[NAME_PLATFORM.length] = "Windows 8.1";
     }
+    
+    gbAlreadyInit = true;
 }
 
-function initZip()
+function getZipName(iImageType, sText)
 {
-    gaiZipFinishCount = [];
+    var asName = [];
+    var sTag = iImageType == IMAGE_ICON ? "<icon" : "<splash";
+    var asToken = sText.split(sTag);
     
-    for (var i = 0; i < ICON_PLATFORM.length; i ++)
+    for (var i = 1; i < asToken.length; i++)
     {
-        gaiZipFinishCount[i] = 0;
+        var iEnd = asToken[i].indexOf("' ");
+        var iBegin = asToken[i].lastIndexOf("/", iEnd) + 1;
+        
+        asName[i - 1] = asToken[i].substring(iBegin, iEnd);
     }
+    
+    //console.log("Image Name" + iImageType + " : " + asName);
+    
+    return asName;
 }
 
 function createZipFileTEMP(eDiv)
@@ -214,9 +235,8 @@ function createZipFile()
 function loadImageFile()
 {
     var eFiles = document.getElementById("IdInputImageFile").files;
-    
+
     initPlatform();
-    initZip();
     
     if (eFiles.length > 0)
     {
@@ -408,8 +428,6 @@ function createTable(iImageType, sDataUrl)
 
     for (var i = 0; i < aasSize.length; i++)
     {
-        var aaZipDirectory = iImageType == IMAGE_ICON ? gaaZipIconDirectory : gaaZipSplashScreenDirectory;
-        
         var eTable = document.createElement("table");
         
         eTable.className = "ImageTable";
@@ -422,10 +440,11 @@ function createTable(iImageType, sDataUrl)
             
             var oScaleImage = new Image;
 
-            oScaleImage.zipDir = aaZipDirectory[i].length <= j ? null : aaZipDirectory[i][j];
+            oScaleImage.zipDir = gaZipDirectory[i];
             oScaleImage.imageType = iImageType;
             oScaleImage.platformIndex = i;
             oScaleImage.onload = onloadResizedImage;
+            oScaleImage.nameIndex = j;
             oScaleImage.fileName = sFileName;
             oScaleImage.text = aasSize[i][j];
             oScaleImage.cell = eCell;
@@ -464,22 +483,32 @@ function onloadResizedImage()
     oCtx.canvas.height = iHeight;
     oCtx.drawImage(this, 0, 0, iWidth, iHeight);
 
-    var index = this.platformIndex;
-    var sFileName = this.fileName;
+    var iImageType = this.imageType;
+    var iPlatformIndex = this.platformIndex;
+    var iNameIndex = this.nameIndex; 
+    var asNameList = iImageType == IMAGE_ICON ? gaasZipIconName[iPlatformIndex] : gaasZipSplashScreenName[iPlatformIndex];
+    var sFileName = asNameList.length > iNameIndex ? asNameList[iNameIndex] : this.fileName;
     var sDataUrl = sFileName.indexOf(".png") > 0 ? eCanvas.toDataURL() : eCanvas.toDataURL("image/jpeg", 0.7);
     
     var eCell = this.cell;
     var eHref = createDownloadButton(sText, sFileName, sDataUrl);
-    
-    if (this.zipDir)
+
+    if (this.zipDir && asNameList.length > iNameIndex)
     {
         this.zipDir.file(sFileName, dataUrlToBase64(sDataUrl), {base64: true});
-        console.log("#I:" + sDataUrl.length);
+        console.log("#" + sFileName + ":" + sDataUrl.length);
 
-        if (++gaiZipFinishCount[index] == (gaaZipIconDirectory[index].length + gaaZipSplashScreenDirectory[index].length))
+        if (++gaiZipFinishCount[iPlatformIndex] == gaiZipTotalCount[iPlatformIndex])
         {
-            console.log("#ZipFinish:" + gaiZipFinishCount[index]);
+            console.log("#Zip[" + iPlatformIndex + "] is finished : " + gaiZipFinishCount[iPlatformIndex]);
+            
+            gZip.file("config.txt", gsZipText);
+            
             createZipTable();
+        }
+        else
+        {
+            console.log("#Zip[" + iPlatformIndex + "] not finished : " + gaiZipFinishCount[iPlatformIndex] + " < " + gaiZipTotalCount[iPlatformIndex]);
         }
     }
     
@@ -689,7 +718,7 @@ function drawBorder(eCanvas)
         </tr>
         <tr>
             <td>SplashScreen Name : </td>
-            <td><input type="text" id="IdSplashScreenFileName" value="screen.png" class="InputText"></input></td>
+            <td><input type="text" id="IdSplashScreenFileName" value="screen.jpg" class="InputText"></input></td>
             <td>Right Offset (pixels) : </td>
             <td><input type="number" id="IdRightOffset" value="1" class="InputNumber" min="0"></input></td>
             <td>Buttom Offset (pixels) : </td>
