@@ -229,19 +229,6 @@ function getZipName(iImageType, sText)
     return asName;
 }
 
-function createZipFileTEMP(eDiv)
-{
-    var e = document.createElement("a");
-    
-    var blob = gZip.generate({type:"blob"});
-    var blobUrl = URL.createObjectURL(blob);
-    
-    e.href = blobUrl;
-    e.innerHTML = "DOWNLOAD ZIP";
-    e.download = "res.zip";
-    //e.addEventListener( 'click', clickSaveZipFile, false );
-    eDiv.appendChild(e);
-}
 
 function clickSaveZipFile()
 {
@@ -251,25 +238,6 @@ function clickSaveZipFile()
 
     window.location = blobUrl;
 }
-
-function createZipFile()
-{
-    var reader = new FileReader();
-    var eThis = this;
-    
-    reader.readAsDataURL( gZip.generate({type:"blob"}) );    
-    reader.onloadend = function(event) {
-
-        var eHref = createDownloadButton("ZIP", "sample.zip", event.target.result);
-        
-        console.log("#ZIP length: " + event.target.result.length);
-        document.getElementById("IdOriginalImageInfo").appendChild(eHref);
-        
-        //eThis.href = event.target.result.length;
-        //window.open(event.target.result.length, "_blank");
-        //document.location.href = event.target.result.length;
-    }
-}    
     
 function loadImageFile()
 {
