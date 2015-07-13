@@ -43,8 +43,7 @@ var ICON_ANDROID = [
     
     "TVDPI (64 x 64)",
     "XXXHDPI (192 x 192)",
-    "Store (512 x 512)",
-    "Featured Image (1024 x 500)"
+    "HD Icon (512 x 512)"
     ];    
 var SPLASH_SCREEN_ANDROID = [
     "PORTRAIT LDPI (200 x 320)",
@@ -54,7 +53,11 @@ var SPLASH_SCREEN_ANDROID = [
     "LANDSCAPE LDPI (320 x 200)",
     "LANDSCAPE MDPI (480 x 320)",
     "LANDSCAPE HDPI (800 x 480)",
-    "LANDSCAPE XHDPI (1280 x 720)"
+    "LANDSCAPE XHDPI (1280 x 720)",
+    
+    "Featured Image (1024 x 500)",
+    "promo ad image (180 x 120)",
+    "Banner (320 x 180)"
     ];
     
 var ICON_WINDOWS_PHONE_8 = [
@@ -160,12 +163,48 @@ function initPlatform()
         ICON_PLATFORM[ICON_PLATFORM.length] = ICON_WINDOWS_PHONE_8;
         SPLASH_SCREEN_PLATFORM[SPLASH_SCREEN_PLATFORM.length] = SPLASH_SCREEN_WINDOWS_PHONE_8;
         NAME_PLATFORM[NAME_PLATFORM.length] = "Windows Phone 8";
+        
+        gaZipDirectory[gaZipDirectory.length] = gZip.folder("wp8");
+        
+        sText = "<platform name='wp8'>\r\n    <icon src='res/wp8/ApplicationIcon.png' width='99' height='99' />\r\n    <icon src='res/wp8/Background.png' width='159' height='159' />\r\n    <splash src='res/screen/wp8/SplashScreenImage.jpg' width='768' height='1280'/></platform>"
+        
+        var asIconName = getZipName(IMAGE_ICON, sText);
+        var asSplashScreenName = getZipName(IMAGE_SPLASHSCREEN, sText);
+        gaasZipIconName[gaasZipIconName.length] = asIconName;
+        gaasZipSplashScreenName[gaasZipSplashScreenName.length] = asSplashScreenName;
+        
+        gsZipText += sText;
+        
+        var iTotalCount = asIconName.length + asSplashScreenName.length;
+        
+        gaiZipTotalCount[gaiZipTotalCount.length] = iTotalCount;
+        gaiZipFinishCount[gaiZipFinishCount.length] = 0;
+        
+        console.log("WP8 total images : " + iTotalCount);
     }
-    if (document.getElementById("IdCheckWindows81").checked)
+    if (document.getElementById("IdCheckWindows8").checked)
     {
         ICON_PLATFORM[ICON_PLATFORM.length] = ICON_WINDOWS_81;
         SPLASH_SCREEN_PLATFORM[SPLASH_SCREEN_PLATFORM.length] = SPLASH_SCREEN_WINDOWS_81;
-        NAME_PLATFORM[NAME_PLATFORM.length] = "Windows 8.1";
+        NAME_PLATFORM[NAME_PLATFORM.length] = "Windows 8";
+        
+        gaZipDirectory[gaZipDirectory.length] = gZip.folder("windows8");
+        
+        sText = "<platform name='windows8'>\r\n    <icon src='res/windows8/logo.png' width='150' height='150' />\r\n    <icon src='res/windows8/smalllogo.png' width='30' height='30' />\r\n    <icon src='res/windows8/storelogo.png' width='50' height='50' />\r\n    <splash src='res/screen/windows8/splashscreen.png' width='620' height='300'/>\r\n</platform>";
+        
+        var asIconName = getZipName(IMAGE_ICON, sText);
+        var asSplashScreenName = getZipName(IMAGE_SPLASHSCREEN, sText);
+        gaasZipIconName[gaasZipIconName.length] = asIconName;
+        gaasZipSplashScreenName[gaasZipSplashScreenName.length] = asSplashScreenName;
+        
+        gsZipText += sText;
+        
+        var iTotalCount = asIconName.length + asSplashScreenName.length;
+        
+        gaiZipTotalCount[gaiZipTotalCount.length] = iTotalCount;
+        gaiZipFinishCount[gaiZipFinishCount.length] = 0;
+        
+        console.log("WP8 total images : " + iTotalCount);
     }
     
     gbAlreadyInit = true;
@@ -199,7 +238,7 @@ function createZipFileTEMP(eDiv)
     
     e.href = blobUrl;
     e.innerHTML = "DOWNLOAD ZIP";
-    e.download = "sample.zip";
+    e.download = "res.zip";
     //e.addEventListener( 'click', clickSaveZipFile, false );
     eDiv.appendChild(e);
 }
@@ -265,8 +304,9 @@ function loadImageFile()
 
 function addOriginalImageInfo(sInfo)
 {
-    var eDiv = document.getElementById("IdOriginalImageInfo");
-    eDiv.innerHTML += sInfo;
+    document.getElementById("IdOriginalImageInfo").innerHTML += sInfo;
+    document.getElementById("IdTdIconTitle").innerHTML = getImageText(IMAGE_ICON) + " : ";
+    document.getElementById("IdTdSplashScreenTitle").innerHTML = getImageText(IMAGE_SPLASHSCREEN) + " : ";
 }
 
 function initAllImageInfo()
@@ -284,10 +324,18 @@ function getImageText(iImageType)
 
 function getImageFileName(iImageType)
 {
-    var sIconFileName = document.getElementById("IdIconFileName").value;
-    var sSplashScreenFileName = document.getElementById("IdSplashScreenFileName").value;
     
-    return iImageType == IMAGE_ICON ? sIconFileName : sSplashScreenFileName;
+    return iImageType == IMAGE_ICON ? "icon.png" : "screen.png"; 
+    /*
+    if (iImageType == IMAGE_ICON)
+    {
+        return document.getElementById("IdIconFileName").value;
+    }
+    else
+    {
+        return document.getElementById("IdSplashScreenFileName").value;
+    }
+    */
 }
 
 function onloadOriginalImage()
@@ -404,7 +452,7 @@ function createZipTable()
         var blob = gZip.generate({type:"blob"});
         var blobUrl = URL.createObjectURL(blob);
         
-        var sZipFileName = "sample.zip";
+        var sZipFileName = "res.zip";
         var eHref = createDownloadButton(sZipFileName, sZipFileName, blobUrl);
         console.log("#ZIP length: " + blobUrl.length);
         eCell.appendChild(eHref);
@@ -414,15 +462,18 @@ function createZipTable()
     eDiv.appendChild(eTable);
 }
 
+function getStandardImageName(sText)
+{
+    var sName = sText.split("(")[0].trim();
+    
+    
+}
+
 function createTable(iImageType, sDataUrl)
 {
     var eIconDiv = document.getElementById("IdIconImage");
     var eSplashScreenDiv = document.getElementById("IdSplashScreenImage");
-    var sIconFileName = document.getElementById("IdIconFileName").value;
-    var sSplashScreenFileName = document.getElementById("IdSplashScreenFileName").value;
-    
     var aasSize = iImageType == IMAGE_ICON ? ICON_PLATFORM : SPLASH_SCREEN_PLATFORM;
-    var sFileName = iImageType == IMAGE_ICON ? sIconFileName : sSplashScreenFileName;
     var eDiv = iImageType == IMAGE_ICON ? eIconDiv : eSplashScreenDiv;
     
 
@@ -445,7 +496,6 @@ function createTable(iImageType, sDataUrl)
             oScaleImage.platformIndex = i;
             oScaleImage.onload = onloadResizedImage;
             oScaleImage.nameIndex = j;
-            oScaleImage.fileName = sFileName;
             oScaleImage.text = aasSize[i][j];
             oScaleImage.cell = eCell;
             oScaleImage.src = sDataUrl;
@@ -464,6 +514,22 @@ function createTitle(sText)
     return eH;
 }
 
+function getImageExtension(iImageType)
+{
+    var e;
+    
+    if (iImageType == IMAGE_ICON)
+    {
+        e = document.getElementById("IdSelectIconExtension");
+    }
+    else
+    {
+        e = document.getElementById("IdSelectSplashScreenExtension");
+    }
+
+    return e.options[e.selectedIndex].value;
+}
+
 function onloadResizedImage()
 {
     var eCanvas = document.createElement("canvas");
@@ -471,23 +537,25 @@ function onloadResizedImage()
     
     eCanvas.className = "ResizedCanvas";
 
-    var sTemp = this.text.split(/[(|)]+/)[1];
+    var iImageType = this.imageType;
+    var asToken = this.text.split(/[(|)]+/);
+    var sTemp = asToken[1];
     var asTemp = sTemp.split("x");
     var iWidth = parseInt(asTemp[0].trim());
     var iHeight = parseInt(asTemp[1].trim());
     var sText = this.text.replace("(", "<br>(");
 
-    //console.log("#TEXT:" + this.text + "____" + asTemp);
+    var sStandardImageName = asToken[0].trim().replace(/[\s]+/g, "-") + "_" + iWidth + "x" + iHeight + getImageExtension(iImageType);
+    console.log("#ImageName:" + sStandardImageName);
 
     oCtx.canvas.width = iWidth;
     oCtx.canvas.height = iHeight;
     oCtx.drawImage(this, 0, 0, iWidth, iHeight);
 
-    var iImageType = this.imageType;
     var iPlatformIndex = this.platformIndex;
     var iNameIndex = this.nameIndex; 
     var asNameList = iImageType == IMAGE_ICON ? gaasZipIconName[iPlatformIndex] : gaasZipSplashScreenName[iPlatformIndex];
-    var sFileName = asNameList.length > iNameIndex ? asNameList[iNameIndex] : this.fileName;
+    var sFileName = asNameList.length > iNameIndex ? asNameList[iNameIndex] : sStandardImageName;
     var sDataUrl = sFileName.indexOf(".png") > 0 ? eCanvas.toDataURL() : eCanvas.toDataURL("image/jpeg", 0.7);
     
     var eCell = this.cell;
@@ -496,7 +564,7 @@ function onloadResizedImage()
     if (this.zipDir && asNameList.length > iNameIndex)
     {
         this.zipDir.file(sFileName, dataUrlToBase64(sDataUrl), {base64: true});
-        console.log("#" + sFileName + ":" + sDataUrl.length);
+        console.log("#" + gaiZipFinishCount[iPlatformIndex] + "." + sFileName + ":" + sDataUrl.length);
 
         if (++gaiZipFinishCount[iPlatformIndex] == gaiZipTotalCount[iPlatformIndex])
         {
@@ -699,29 +767,44 @@ function drawBorder(eCanvas)
     <table style="width:90%;">
         <tr>
             <td>Android : </td>
-            <td><input type="checkbox" id="IdCheckAndroid" checked=></input></td>
+            <td><input type="checkbox" id="IdCheckAndroid" checked="checked"></input></td>
             <td>Windows Phone 8 : </td>
             <td><input type="checkbox" id="IdCheckWindowsPhone8""></input></td>
-            <td>Windows 8.1 : </td>
-            <td><input type="checkbox" id="IdCheckWindows81""></input></td>
+            <td>Windows 8 : </td>
+            <td><input type="checkbox" id="IdCheckWindows8""></input></td>
         </tr>
     </table>
     <p class="Title">Config : </p>
     <table style="width:90%;">
         <tr>
-            <td>Icon Name : </td>
-            <td><input type="text" id="IdIconFileName" value="icon.png" class="InputText"></input></td> 
-            <td>Left Offset (pixels) : </td>
+            <td>Icon Extension : </td>
+            <td>
+            <!--<input type="text" id="IdIconFileName" value="icon.png" class="InputText"></input>-->
+            
+            <select id="IdSelectIconExtension">
+                <option value=".jpg">JPG</option>
+                <option value=".png" selected="selected">PNG</option>
+            </select>
+            </td> 
+            <td>&nbsp;&nbsp;&nbsp;Left Offset (pixels) : </td>
             <td><input type="number" id="IdLeftOffset" value="1" class="InputNumber" min="0"></input></td> 
-            <td>Top Offset (pixels) : </td>
+            <td>&nbsp;&nbsp;&nbsp;Top Offset (pixels) : </td>
             <td><input type="number" id="IdTopOffset" value="1" class="InputNumber" min="0"></input></td> 
         </tr>
         <tr>
-            <td>SplashScreen Name : </td>
-            <td><input type="text" id="IdSplashScreenFileName" value="screen.jpg" class="InputText"></input></td>
-            <td>Right Offset (pixels) : </td>
+            <td>SplashScreen Extension : </td>
+            <td>
+            <!--<input type="text" id="IdSplashScreenFileName" value="screen.jpg" class="InputText"></input>-->
+            
+            <select id="IdSelectSplashScreenExtension">
+                <option value=".jpg" selected="selected">JPG</option>
+                <option value=".png">PNG</option>
+            </select>
+            
+            </td>
+            <td>&nbsp;&nbsp;&nbsp;Right Offset (pixels) : </td>
             <td><input type="number" id="IdRightOffset" value="1" class="InputNumber" min="0"></input></td>
-            <td>Buttom Offset (pixels) : </td>
+            <td>&nbsp;&nbsp;&nbsp;Buttom Offset (pixels) : </td>
             <td><input type="number" id="IdButtomOffset" value="1" class="InputNumber" min="0"></input></td>
         </tr>
     </table>
@@ -735,8 +818,8 @@ function drawBorder(eCanvas)
     <div id="IdOriginalImageInfo" class="Title"></div>
     <table style="width:90%;">
         <tr>
-            <td>Icon : </td>
-            <td>SplashScreen : </td>
+            <td id="IdTdIconTitle"></td>
+            <td id="IdTdSplashScreenTitle"></td>
         </tr>
         <tr>
             <td><canvas id="IdCanvasOriginalIconImage"></canvas></td>
